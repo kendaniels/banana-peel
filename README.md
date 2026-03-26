@@ -11,13 +11,13 @@ Install it as an OS service and you'll never think about it again. Or just use i
 ## 📦 Install
 
 ```sh
-pip install banana-peel
+pip install git+https://github.com/kendaniels/banana-peel.git
 ```
 
 Or with [pipx](https://pipx.pypa.io/) for an isolated install:
 
 ```sh
-pipx install banana-peel
+pipx install git+https://github.com/kendaniels/banana-peel.git
 ```
 
 Python 3.9+ required.
@@ -151,10 +151,10 @@ banana-peel watch ~/Downloads --ai-rename --provider openai
 Install the provider SDK you want to use:
 
 ```sh
-pip install banana-peel[gemini]    # Google Gemini
-pip install banana-peel[openai]    # OpenAI
-pip install banana-peel[anthropic] # Anthropic
-pip install banana-peel[ai]        # all providers
+pip install "banana-peel[gemini] @ git+https://github.com/kendaniels/banana-peel.git"
+pip install "banana-peel[openai] @ git+https://github.com/kendaniels/banana-peel.git"
+pip install "banana-peel[anthropic] @ git+https://github.com/kendaniels/banana-peel.git"
+pip install "banana-peel[ai] @ git+https://github.com/kendaniels/banana-peel.git"
 ```
 
 Set your API key via environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`) or in the config file. Enable in config for always-on renaming:
