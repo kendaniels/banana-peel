@@ -42,7 +42,7 @@ Process files or directories on demand.
 banana-peel clean photo.png                              # single file
 banana-peel clean ~/Downloads                            # all Gemini PNGs in a directory
 banana-peel clean ~/Downloads -r                         # recursive
-banana-peel clean ~/Downloads --no-watermark             # compress only, skip watermark removal
+banana-peel clean ~/Downloads --skip-watermark            # compress only, skip watermark removal
 banana-peel clean ~/Downloads -m ~/Pictures/gemini       # move processed files to a folder
 banana-peel clean ~/Downloads --no-compress              # watermark removal only, skip compression
 banana-peel clean ~/Downloads --zopfli                   # max compression (slower)

@@ -69,7 +69,7 @@ def clean(
     recursive: bool = typer.Option(False, "--recursive", "-r", help="Process directories recursively."),
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     strip: Optional[str] = typer.Option(None, "--strip", "-s", help="Metadata stripping: none, safe, all."),
-    no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal (compress only)."),
+    skip_watermark: bool = typer.Option(False, "--skip-watermark", help="Skip watermark removal (compress only)."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
     move: Optional[Path] = typer.Option(None, "--move", "-m", help="Move processed files to this directory."),
@@ -98,7 +98,7 @@ def clean(
         cfg.compression.strip_metadata = strip
     if zopfli:
         cfg.compression.use_zopfli = True
-    if no_watermark:
+    if skip_watermark:
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
@@ -217,7 +217,7 @@ def watch(
     directories: Optional[List[Path]] = typer.Argument(None, help="Directories to watch."),
     move: Optional[Path] = typer.Option(None, "--move", "-m", help="Move processed files to this directory."),
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
-    no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
+    skip_watermark: bool = typer.Option(False, "--skip-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
     ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
     no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
@@ -252,7 +252,7 @@ def watch(
         cfg.watch.destination = str(move.expanduser().resolve())
     if level is not None:
         cfg.compression.level = level
-    if no_watermark:
+    if skip_watermark:
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
@@ -289,8 +289,8 @@ def watch(
             extra_args.extend(["--config", str(config)])
         if verbose:
             extra_args.append("--verbose")
-        if no_watermark:
-            extra_args.append("--no-watermark")
+        if skip_watermark:
+            extra_args.append("--skip-watermark")
         if no_compress:
             extra_args.append("--no-compress")
         if level is not None:
