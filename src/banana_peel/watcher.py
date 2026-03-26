@@ -12,7 +12,7 @@ from pathlib import Path
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from banana_peel.config import CompressionConfig, JpgConfig, RenameConfig, WatchConfig, WatermarkConfig
+from banana_peel.config import CompressionConfig, JpgConfig, RenameConfig, ResizeConfig, WatchConfig, WatermarkConfig
 from banana_peel.jpg import convert_to_jpg
 from banana_peel.notify import notify as send_notification
 from banana_peel.processor import process_file
@@ -29,6 +29,7 @@ class PngHandler(FileSystemEventHandler):
         compression_config: CompressionConfig,
         watch_config: WatchConfig,
         rename_config: RenameConfig | None = None,
+        resize_config: ResizeConfig | None = None,
         jpg_config: JpgConfig | None = None,
         dry_run: bool = False,
         verbose: bool = False,
@@ -37,6 +38,7 @@ class PngHandler(FileSystemEventHandler):
         self._watermark_config = watermark_config
         self._compression_config = compression_config
         self._rename_config = rename_config or RenameConfig()
+        self._resize_config = resize_config or ResizeConfig()
         self._jpg_config = jpg_config or JpgConfig()
         self._extensions = set(watch_config.extensions)
         self._debounce = watch_config.debounce_seconds
@@ -128,6 +130,7 @@ class PngHandler(FileSystemEventHandler):
                 watermark_config=self._watermark_config,
                 compression_config=self._compression_config,
                 rename_config=self._rename_config,
+                resize_config=self._resize_config,
                 destination=self._destination,
             )
             if result is None:
@@ -173,6 +176,7 @@ def watch(
     compression_config: CompressionConfig | None = None,
     watch_config: WatchConfig | None = None,
     rename_config: RenameConfig | None = None,
+    resize_config: ResizeConfig | None = None,
     jpg_config: JpgConfig | None = None,
     dry_run: bool = False,
     verbose: bool = False,
@@ -185,6 +189,7 @@ def watch(
     compression_config = compression_config or CompressionConfig()
     watch_config = watch_config or WatchConfig()
     rename_config = rename_config or RenameConfig()
+    resize_config = resize_config or ResizeConfig()
     jpg_config = jpg_config or JpgConfig()
 
     handler = PngHandler(
@@ -192,6 +197,7 @@ def watch(
         compression_config=compression_config,
         watch_config=watch_config,
         rename_config=rename_config,
+        resize_config=resize_config,
         jpg_config=jpg_config,
         dry_run=dry_run,
         verbose=verbose,

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from banana_peel.compressor import compress_png
-from banana_peel.config import CompressionConfig, RenameConfig, WatermarkConfig
+from banana_peel.config import CompressionConfig, RenameConfig, ResizeConfig, WatermarkConfig
 from banana_peel.watermark import has_watermark, remove_watermark
 
 logger = logging.getLogger("banana_peel")
@@ -29,14 +29,16 @@ def process_file(
     watermark_config: WatermarkConfig,
     compression_config: CompressionConfig,
     rename_config: RenameConfig | None = None,
+    resize_config: ResizeConfig | None = None,
     destination: Path | None = None,
     dry_run: bool = False,
 ) -> ProcessResult | None:
-    """Run the full pipeline: watermark removal -> compression -> rename -> move.
+    """Run the full pipeline: watermark removal -> resize -> compression -> rename -> move.
 
     Returns ProcessResult on success, or None if dry_run.
     """
     rename_config = rename_config or RenameConfig()
+    resize_config = resize_config or ResizeConfig()
 
     # --- Watermark removal ---
     watermark_removed = False
@@ -49,6 +51,17 @@ def process_file(
 
     if dry_run:
         return None
+
+    # --- Resize ---
+    if resize_config.enabled:
+        from PIL import Image
+
+        img = Image.open(file_path)
+        w, h = img.size
+        max_dim = resize_config.max_dimension
+        if w > max_dim or h > max_dim:
+            img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+            img.save(file_path, "PNG")
 
     # --- Compression ---
     bytes_saved = 0

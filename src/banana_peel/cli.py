@@ -77,6 +77,8 @@ def clean(
     no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
     provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
+    resize: Optional[int] = typer.Option(None, "--resize", help="Resize to max dimension in pixels."),
+    no_resize: bool = typer.Option(False, "--no-resize", help="Disable resize (overrides config)."),
     jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
     no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
     jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
@@ -108,6 +110,11 @@ def clean(
         cfg.rename.provider = provider
     if api_key:
         cfg.rename.api_key = api_key
+    if resize is not None:
+        cfg.resize.enabled = True
+        cfg.resize.max_dimension = resize
+    if no_resize:
+        cfg.resize.enabled = False
     if jpg:
         cfg.jpg.enabled = True
     if no_jpg:
@@ -166,6 +173,7 @@ def clean(
             watermark_config=cfg.watermark,
             compression_config=cfg.compression,
             rename_config=cfg.rename,
+            resize_config=cfg.resize,
             destination=dest_dir,
         )
         if result is None:
@@ -215,6 +223,8 @@ def watch(
     no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
     provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
     api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
+    resize: Optional[int] = typer.Option(None, "--resize", help="Resize to max dimension in pixels."),
+    no_resize: bool = typer.Option(False, "--no-resize", help="Disable resize (overrides config)."),
     jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
     no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
     jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
@@ -254,6 +264,11 @@ def watch(
         cfg.rename.provider = provider
     if api_key:
         cfg.rename.api_key = api_key
+    if resize is not None:
+        cfg.resize.enabled = True
+        cfg.resize.max_dimension = resize
+    if no_resize:
+        cfg.resize.enabled = False
     if jpg:
         cfg.jpg.enabled = True
     if no_jpg:
@@ -288,6 +303,10 @@ def watch(
             extra_args.extend(["--provider", provider])
         if api_key:
             extra_args.extend(["--api-key", api_key])
+        if resize is not None:
+            extra_args.extend(["--resize", str(resize)])
+        if no_resize:
+            extra_args.append("--no-resize")
         if jpg:
             extra_args.append("--jpg")
         if no_jpg:
@@ -319,6 +338,7 @@ def watch(
         compression_config=cfg.compression,
         watch_config=cfg.watch,
         rename_config=cfg.rename,
+        resize_config=cfg.resize,
         jpg_config=cfg.jpg,
         dry_run=dry_run,
         verbose=verbose,
