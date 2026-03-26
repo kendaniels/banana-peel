@@ -68,10 +68,11 @@ def process_file(
     if rename_config.enabled:
         # Try AI rename (import here to avoid circular deps and optional dep issues)
         try:
-            from banana_peel.renamer import get_renamer, slugify
+            from banana_peel.renamer import RetryingRenamer, get_renamer, slugify
 
             renamer = get_renamer(rename_config)
             if renamer is not None:
+                renamer = RetryingRenamer(renamer)
                 description = renamer.describe(file_path)
                 if description:
                     slug = slugify(description)
