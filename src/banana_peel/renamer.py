@@ -44,8 +44,8 @@ def slugify(text: str, max_length: int = _MAX_SLUG_LENGTH) -> str:
     - Truncate at word boundary to max_length
     """
     text = text.lower().strip()
-    text = re.sub(r"[^a-z0-9\s\-]", "", text)
     text = re.sub(r"[\s_]+", "-", text)
+    text = re.sub(r"[^a-z0-9\-]", "", text)
     text = re.sub(r"-+", "-", text)
     text = text.strip("-")
 
