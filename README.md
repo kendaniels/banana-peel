@@ -2,7 +2,7 @@
 
 Remove Gemini watermarks from PNG images and losslessly compress them.
 
-Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark and compressing them the moment they land. Set a destination folder and processed images get moved there automatically, keeping Downloads clean. Install it as an OS service and never think about it again -- every image arrives clean. It also works as a one-shot CLI for processing files you already have.
+Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark and compressing them the moment they land. Set a move folder and processed images get moved there automatically, keeping Downloads clean. Install it as an OS service and never think about it again -- every image arrives clean. It also works as a one-shot CLI for processing files you already have.
 
 ## 📦 Install
 
@@ -39,17 +39,17 @@ banana-peel watch ~/Downloads
 Process files or directories on demand.
 
 ```sh
-banana-peel clean photo.png                  # single file
-banana-peel clean ~/Downloads                # all Gemini PNGs in a directory
-banana-peel clean ~/Downloads -r             # recursive
-banana-peel clean ~/Downloads --no-watermark  # compress only, skip watermark removal
-banana-peel clean ~/Downloads -m ~/Pictures/gemini  # move processed files to a folder
-banana-peel clean ~/Downloads --no-compress  # watermark removal only, skip compression
-banana-peel clean ~/Downloads --zopfli       # max compression (slower)
-banana-peel clean ~/Downloads --jpg          # also produce a JPG output
-banana-peel clean ~/Downloads --jpg --jpg-quality 60  # JPG at 60% quality
-banana-peel clean ~/Downloads --jpg --replace-png     # JPG only, delete the PNG
-banana-peel clean ~/Downloads -n             # dry run
+banana-peel clean photo.png                              # single file
+banana-peel clean ~/Downloads                            # all Gemini PNGs in a directory
+banana-peel clean ~/Downloads -r                         # recursive
+banana-peel clean ~/Downloads --no-watermark             # compress only, skip watermark removal
+banana-peel clean ~/Downloads -m ~/Pictures/gemini       # move processed files to a folder
+banana-peel clean ~/Downloads --no-compress              # watermark removal only, skip compression
+banana-peel clean ~/Downloads --zopfli                   # max compression (slower)
+banana-peel clean ~/Downloads --jpg                      # also produce a JPG output
+banana-peel clean ~/Downloads --jpg --jpg-quality 60     # JPG at 60% quality
+banana-peel clean ~/Downloads --jpg --replace-png        # JPG only, delete the PNG
+banana-peel clean ~/Downloads -n                         # dry run
 ```
 
 Processed files are saved as `<name>_peeled.png`, or given a descriptive AI-generated name with `--ai-rename`.
@@ -59,10 +59,10 @@ Processed files are saved as `<name>_peeled.png`, or given a descriptive AI-gene
 Monitor directories and process new Gemini PNGs as they arrive.
 
 ```sh
-banana-peel watch ~/Downloads              # foreground
-banana-peel watch ~/Downloads -b           # background (detached)
-banana-peel watch ~/Downloads -m ~/Pictures/gemini  # move processed files to a folder
-banana-peel watch                           # uses directories from config
+banana-peel watch ~/Downloads                          # foreground
+banana-peel watch ~/Downloads -b                       # background (detached)
+banana-peel watch ~/Downloads -m ~/Pictures/gemini     # move processed files to a folder
+banana-peel watch                                      # uses directories from config
 ```
 
 ### stop / status

@@ -16,12 +16,13 @@ All notable changes to Banana Peel will be documented in this file.
 - Add `--replace-png` flag to delete the PNG after JPG conversion
 - Add `[jpg]` config section with `enabled`, `quality`, and `replace_png` options
 - RGBA images are composited onto white background before JPG conversion
+- Renamed `--destination` / `-d` to `--move` / `-m`
 
 ## 0.2.0 - 2026-03-26
 
-- Add `--destination` / `-d` option to `clean` and `watch` commands to move processed files to a separate folder
+- Add `--move` / `-m` option to `clean` and `watch` commands to move processed files to a separate folder
 - Add `destination` config option under `[watch]` section
-- Destination directory is created automatically if it doesn't exist
+- Move directory is created automatically if it doesn't exist
 
 ## 0.1.0 - 2026-03-26
 
