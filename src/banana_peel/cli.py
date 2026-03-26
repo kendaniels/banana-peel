@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -12,10 +11,9 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from banana_peel import __version__
-from banana_peel.compressor import compress_png
 from banana_peel.config import Config, load_config, write_default_config
 from banana_peel.daemon import LOG_PATH, PID_PATH, PidFile, start_background
-from banana_peel.watermark import has_watermark, remove_watermark
+from banana_peel.processor import process_file
 from banana_peel.watcher import watch as watch_dirs
 
 app = typer.Typer(
@@ -83,11 +81,16 @@ def clean(
     logger = logging.getLogger("banana_peel")
     cfg = _load_merged_config(config)
 
-    comp_level = level if level is not None else cfg.compression.level
-    comp_strip = strip if strip is not None else cfg.compression.strip_metadata
-    use_zopfli = zopfli or cfg.compression.use_zopfli
-    do_watermark = not no_watermark and cfg.watermark.enabled
-    do_compress = not no_compress and cfg.compression.enabled
+    if level is not None:
+        cfg.compression.level = level
+    if strip is not None:
+        cfg.compression.strip_metadata = strip
+    if zopfli:
+        cfg.compression.use_zopfli = True
+    if no_watermark:
+        cfg.watermark.enabled = False
+    if no_compress:
+        cfg.compression.enabled = False
 
     # Resolve destination directory
     dest_dir: Path | None = None
@@ -122,51 +125,37 @@ def clean(
     watermarks_removed = 0
 
     for png in png_files:
-        peeled_path = png.with_name(png.stem + "_peeled" + png.suffix)
-        watermark_removed = False
-
-        if do_watermark and has_watermark(png):
-            if dry_run:
-                console.print(f"[dim]Would remove watermark:[/dim] {png.name}")
-            else:
-                cleaned = remove_watermark(png)
-                cleaned.save(png, "PNG")
-                watermark_removed = True
-                watermarks_removed += 1
-
         if dry_run:
-            action = "compress + rename" if do_compress else "rename"
-            if watermark_removed:
-                action = "remove watermark + " + action
-            console.print(f"[dim]Would {action}:[/dim] {png.name} -> {peeled_path.name}")
-        else:
-            saved = 0
-            if do_compress:
-                saved = compress_png(
-                    png, level=comp_level, strip=comp_strip,
-                    use_zopfli=use_zopfli,
-                )
-                total_saved += saved
+            target = "<ai-renamed>.png" if cfg.rename.enabled else png.stem + "_peeled.png"
+            console.print(f"[dim]Would process:[/dim] {png.name} -> {target}")
+            continue
 
-            # Rename to _peeled as final step
-            png.rename(peeled_path)
+        result = process_file(
+            file_path=png,
+            watermark_config=cfg.watermark,
+            compression_config=cfg.compression,
+            rename_config=cfg.rename,
+            destination=dest_dir,
+        )
+        if result is None:
+            continue
 
-            # Move to destination folder if configured
-            if dest_dir:
-                final_path = dest_dir / peeled_path.name
-                shutil.move(str(peeled_path), str(final_path))
-                peeled_path = final_path
-                console.print(f"[blue]Moved:[/blue] {final_path}")
+        if result.watermark_removed:
+            watermarks_removed += 1
+        total_saved += result.bytes_saved
 
-            if watermark_removed and do_compress:
+        if result.output_path.parent != png.parent:
+            console.print(f"[blue]Moved:[/blue] {result.output_path}")
+
+        if verbose:
+            if result.watermark_removed and cfg.compression.enabled:
                 status_msg = "Cleaned + compressed"
-            elif watermark_removed:
+            elif result.watermark_removed:
                 status_msg = "Cleaned"
             else:
                 status_msg = "Compressed"
-            if verbose:
-                detail = f" [dim](saved {saved:,} bytes)[/dim]" if do_compress else ""
-                console.print(f"[green]{status_msg}:[/green] {png.name} -> {peeled_path.name}{detail}")
+            detail = f" [dim](saved {result.bytes_saved:,} bytes)[/dim]" if cfg.compression.enabled else ""
+            console.print(f"[green]{status_msg}:[/green] {png.name} -> {result.output_path.name}{detail}")
 
     if not dry_run:
         console.print(
@@ -251,6 +240,7 @@ def watch(
         watermark_config=cfg.watermark,
         compression_config=cfg.compression,
         watch_config=cfg.watch,
+        rename_config=cfg.rename,
         dry_run=dry_run,
         verbose=verbose,
     )
