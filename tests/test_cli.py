@@ -49,6 +49,16 @@ def test_status_not_running():
     assert "Not running" in result.output
 
 
+def test_clean_with_destination(tmp_png, tmp_path):
+    dest = tmp_path / "output"
+    result = runner.invoke(app, ["clean", str(tmp_png), "--destination", str(dest), "--verbose"])
+    assert result.exit_code == 0
+    assert "Done!" in result.output
+    # File should be in destination, not original location
+    assert not tmp_png.with_name(tmp_png.stem + "_peeled.png").exists()
+    assert (dest / (tmp_png.stem + "_peeled.png")).exists()
+
+
 def test_stop_not_running():
     result = runner.invoke(app, ["stop"])
     assert result.exit_code == 1

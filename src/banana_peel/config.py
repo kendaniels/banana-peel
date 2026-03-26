@@ -28,6 +28,7 @@ use_zopfli = false       # Use Zopfli for max compression (slower)
 
 [watch]
 directories = ["~/Downloads"]  # Folders to watch (paths must be quoted)
+destination = ""               # Move processed files here (empty = keep in place)
 recursive = false
 debounce_seconds = 1.0
 extensions = [".png"]
@@ -52,6 +53,7 @@ class CompressionConfig:
 @dataclass
 class WatchConfig:
     directories: list[str] = field(default_factory=list)
+    destination: str = ""
     recursive: bool = False
     debounce_seconds: float = 1.0
     extensions: list[str] = field(default_factory=lambda: [".png"])
@@ -92,7 +94,7 @@ def load_config(path: str | Path | None = None) -> Config:
 
     if "watch" in data:
         watch = data["watch"]
-        for key in ("directories", "recursive", "debounce_seconds", "extensions", "notify"):
+        for key in ("directories", "destination", "recursive", "debounce_seconds", "extensions", "notify"):
             if key in watch:
                 setattr(config.watch, key, watch[key])
 

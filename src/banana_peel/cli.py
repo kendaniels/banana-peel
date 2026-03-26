@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -72,6 +73,7 @@ def clean(
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal (compress only)."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
+    destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be done without doing it."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
     config: Optional[Path] = typer.Option(None, "--config", "-c", help="Config file path."),
@@ -86,6 +88,15 @@ def clean(
     use_zopfli = zopfli or cfg.compression.use_zopfli
     do_watermark = not no_watermark and cfg.watermark.enabled
     do_compress = not no_compress and cfg.compression.enabled
+
+    # Resolve destination directory
+    dest_dir: Path | None = None
+    if destination:
+        dest_dir = destination.expanduser().resolve()
+    elif cfg.watch.destination:
+        dest_dir = Path(cfg.watch.destination).expanduser().resolve()
+    if dest_dir:
+        dest_dir.mkdir(parents=True, exist_ok=True)
 
     # Collect all Gemini-generated PNG files
     png_files: list[Path] = []
@@ -140,6 +151,13 @@ def clean(
             # Rename to _peeled as final step
             png.rename(peeled_path)
 
+            # Move to destination folder if configured
+            if dest_dir:
+                final_path = dest_dir / peeled_path.name
+                shutil.move(str(peeled_path), str(final_path))
+                peeled_path = final_path
+                console.print(f"[blue]Moved:[/blue] {final_path}")
+
             if watermark_removed and do_compress:
                 status_msg = "Cleaned + compressed"
             elif watermark_removed:
@@ -162,6 +180,7 @@ def clean(
 @app.command()
 def watch(
     directories: Optional[List[Path]] = typer.Argument(None, help="Directories to watch."),
+    destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
@@ -184,6 +203,8 @@ def watch(
         console.print("[red]No directories specified.[/red] Pass directories as arguments or set them in config.")
         raise typer.Exit(1)
 
+    if destination:
+        cfg.watch.destination = str(destination.expanduser().resolve())
     if level is not None:
         cfg.compression.level = level
     if no_watermark:
@@ -196,6 +217,8 @@ def watch(
         extra_args = []
         for d in watch_dirs_list:
             extra_args.append(d)
+        if destination:
+            extra_args.extend(["--destination", str(destination.expanduser().resolve())])
         if config:
             extra_args.extend(["--config", str(config)])
         if verbose:

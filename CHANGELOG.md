@@ -2,6 +2,12 @@
 
 All notable changes to Banana Peel will be documented in this file.
 
+## 0.2.0 - 2026-03-26
+
+- Add `--destination` / `-d` option to `clean` and `watch` commands to move processed files to a separate folder
+- Add `destination` config option under `[watch]` section
+- Destination directory is created automatically if it doesn't exist
+
 ## 0.1.0 - 2026-03-26
 
 Initial release.

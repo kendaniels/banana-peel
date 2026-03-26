@@ -2,7 +2,7 @@
 
 Remove Gemini watermarks from PNG images and losslessly compress them.
 
-Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark and compressing them the moment they land. Install it as an OS service and never think about it again -- every image arrives clean. It also works as a one-shot CLI for processing files you already have.
+Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark and compressing them the moment they land. Set a destination folder and processed images get moved there automatically, keeping Downloads clean. Install it as an OS service and never think about it again -- every image arrives clean. It also works as a one-shot CLI for processing files you already have.
 
 ## 📦 Install
 
@@ -43,6 +43,7 @@ banana-peel clean photo.png                  # single file
 banana-peel clean ~/Downloads                # all Gemini PNGs in a directory
 banana-peel clean ~/Downloads -r             # recursive
 banana-peel clean ~/Downloads --no-watermark  # compress only, skip watermark removal
+banana-peel clean ~/Downloads -d ~/Pictures/gemini  # move processed files to a folder
 banana-peel clean ~/Downloads --no-compress  # watermark removal only, skip compression
 banana-peel clean ~/Downloads --zopfli       # max compression (slower)
 banana-peel clean ~/Downloads -n             # dry run
@@ -57,6 +58,7 @@ Monitor directories and process new Gemini PNGs as they arrive.
 ```sh
 banana-peel watch ~/Downloads              # foreground
 banana-peel watch ~/Downloads -b           # background (detached)
+banana-peel watch ~/Downloads -d ~/Pictures/gemini  # move processed files to a folder
 banana-peel watch                           # uses directories from config
 ```
 
@@ -105,6 +107,7 @@ use_zopfli = false       # Use Zopfli for max compression (slower)
 
 [watch]
 directories = ["~/Downloads"]  # Folders to watch (paths must be quoted)
+destination = ""               # Move processed files here (empty = keep in place)
 recursive = false
 debounce_seconds = 1.0
 extensions = [".png"]

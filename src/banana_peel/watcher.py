@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import signal
 import threading
 import time
@@ -36,6 +37,11 @@ class PngHandler(FileSystemEventHandler):
         self._compression_config = compression_config
         self._extensions = set(watch_config.extensions)
         self._debounce = watch_config.debounce_seconds
+        self._destination = (
+            Path(watch_config.destination).expanduser().resolve()
+            if watch_config.destination
+            else None
+        )
         self._dry_run = dry_run
         self._verbose = verbose
         self._notify = watch_config.notify
@@ -134,22 +140,31 @@ class PngHandler(FileSystemEventHandler):
             # Rename to _peeled as final step
             file_path.rename(peeled_path)
 
+            # Move to destination folder if configured
+            final_path = peeled_path
+            if self._destination:
+                self._destination.mkdir(parents=True, exist_ok=True)
+                dest_path = self._destination / peeled_path.name
+                shutil.move(str(peeled_path), str(dest_path))
+                final_path = dest_path
+                logger.info("Moved: %s -> %s", peeled_path.name, final_path)
+
             if watermark_removed and self._compression_config.enabled:
                 action = "Cleaned + compressed"
             elif watermark_removed:
                 action = "Cleaned"
             else:
                 action = "Compressed"
-            logger.info("%s: %s -> %s (saved %d bytes)", action, file_path.name, peeled_path.name, saved)
+            logger.info("%s: %s -> %s (saved %d bytes)", action, file_path.name, final_path.name, saved)
 
             # Send notification if enabled
             if self._notify and not self._dry_run:
-                send_notification("Banana Peel", f"{action}: {peeled_path.name}")
+                send_notification("Banana Peel", f"{action}: {final_path.name}")
 
-            # Record the mtime of the peeled file so we don't re-process it
+            # Record the mtime of the final file so we don't re-process it
             with self._lock:
-                peeled_str = str(peeled_path)
-                self._our_mtime[peeled_str] = os.path.getmtime(peeled_str)
+                final_str = str(final_path)
+                self._our_mtime[final_str] = os.path.getmtime(final_str)
 
         except Exception:
             logger.exception("Error processing %s", path)
