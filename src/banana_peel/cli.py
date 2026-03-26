@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -12,11 +11,10 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from banana_peel import __version__
-from banana_peel.compressor import compress_png
 from banana_peel.config import Config, load_config, write_default_config
 from banana_peel.daemon import LOG_PATH, PID_PATH, PidFile, start_background
 from banana_peel.jpg import convert_to_jpg
-from banana_peel.watermark import has_watermark, remove_watermark
+from banana_peel.processor import process_file
 from banana_peel.watcher import watch as watch_dirs
 
 app = typer.Typer(
@@ -75,6 +73,10 @@ def clean(
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
     destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
+    ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
+    no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
+    api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
     jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
     no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
     jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
@@ -88,12 +90,24 @@ def clean(
     logger = logging.getLogger("banana_peel")
     cfg = _load_merged_config(config)
 
-    comp_level = level if level is not None else cfg.compression.level
-    comp_strip = strip if strip is not None else cfg.compression.strip_metadata
-    use_zopfli = zopfli or cfg.compression.use_zopfli
-    do_watermark = not no_watermark and cfg.watermark.enabled
-    do_compress = not no_compress and cfg.compression.enabled
-
+    if level is not None:
+        cfg.compression.level = level
+    if strip is not None:
+        cfg.compression.strip_metadata = strip
+    if zopfli:
+        cfg.compression.use_zopfli = True
+    if no_watermark:
+        cfg.watermark.enabled = False
+    if no_compress:
+        cfg.compression.enabled = False
+    if ai_rename:
+        cfg.rename.enabled = True
+    if no_ai_rename:
+        cfg.rename.enabled = False
+    if provider:
+        cfg.rename.provider = provider
+    if api_key:
+        cfg.rename.api_key = api_key
     if jpg:
         cfg.jpg.enabled = True
     if no_jpg:
@@ -132,66 +146,54 @@ def clean(
         console.print("[yellow]No PNG files found.[/yellow]")
         raise typer.Exit(1)
 
+    if cfg.rename.enabled and not dry_run:
+        console.print(f"[dim]AI rename enabled: will make {len(png_files)} API call(s)[/dim]")
+
     total_saved = 0
     watermarks_removed = 0
 
     for png in png_files:
-        peeled_path = png.with_name(png.stem + "_peeled" + png.suffix)
-        watermark_removed = False
-
-        if do_watermark and has_watermark(png):
-            if dry_run:
-                console.print(f"[dim]Would remove watermark:[/dim] {png.name}")
-            else:
-                cleaned = remove_watermark(png)
-                cleaned.save(png, "PNG")
-                watermark_removed = True
-                watermarks_removed += 1
-
         if dry_run:
-            action = "compress + rename" if do_compress else "rename"
-            if watermark_removed:
-                action = "remove watermark + " + action
-            target = peeled_path.name
+            target = "<ai-renamed>.png" if cfg.rename.enabled else png.stem + "_peeled.png"
             if cfg.jpg.enabled:
-                jpg_name = peeled_path.with_suffix(".jpg").name
+                jpg_name = target.replace(".png", ".jpg")
                 target += f" + {jpg_name} (quality: {cfg.jpg.quality})"
-            console.print(f"[dim]Would {action}:[/dim] {png.name} -> {target}")
-        else:
-            saved = 0
-            if do_compress:
-                saved = compress_png(
-                    png, level=comp_level, strip=comp_strip,
-                    use_zopfli=use_zopfli,
-                )
-                total_saved += saved
+            console.print(f"[dim]Would process:[/dim] {png.name} -> {target}")
+            continue
 
-            # Rename to _peeled as final step
-            png.rename(peeled_path)
+        result = process_file(
+            file_path=png,
+            watermark_config=cfg.watermark,
+            compression_config=cfg.compression,
+            rename_config=cfg.rename,
+            destination=dest_dir,
+        )
+        if result is None:
+            continue
 
-            # Move to destination folder if configured
-            if dest_dir:
-                final_path = dest_dir / peeled_path.name
-                shutil.move(str(peeled_path), str(final_path))
-                peeled_path = final_path
-                console.print(f"[blue]Moved:[/blue] {final_path}")
+        if result.watermark_removed:
+            watermarks_removed += 1
+        total_saved += result.bytes_saved
 
-            # JPG conversion
-            if cfg.jpg.enabled:
-                jpg_path = convert_to_jpg(peeled_path, cfg.jpg)
+        if result.output_path.parent != png.parent:
+            console.print(f"[blue]Moved:[/blue] {result.output_path}")
+
+        # JPG conversion
+        if cfg.jpg.enabled:
+            jpg_path = convert_to_jpg(result.output_path, cfg.jpg)
+            if verbose:
                 jpg_size = jpg_path.stat().st_size
-                if verbose:
-                    console.print(f"[green]JPG:[/green] {jpg_path.name} [dim]({jpg_size:,} bytes)[/dim]")
+                console.print(f"[green]JPG:[/green] {jpg_path.name} [dim]({jpg_size:,} bytes)[/dim]")
 
-            if watermark_removed and do_compress:
+        if verbose:
+            if result.watermark_removed and cfg.compression.enabled:
                 status_msg = "Cleaned + compressed"
-            elif watermark_removed:
+            elif result.watermark_removed:
                 status_msg = "Cleaned"
             else:
                 status_msg = "Compressed"
-            if verbose:
-                detail = f" [dim](saved {saved:,} bytes)[/dim]" if do_compress else ""
-                console.print(f"[green]{status_msg}:[/green] {png.name} -> {peeled_path.name}{detail}")
+            detail = f" [dim](saved {result.bytes_saved:,} bytes)[/dim]" if cfg.compression.enabled else ""
+            console.print(f"[green]{status_msg}:[/green] {png.name} -> {result.output_path.name}{detail}")
 
     if not dry_run:
         console.print(
@@ -209,6 +211,10 @@ def watch(
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
+    ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
+    no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
+    api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
     jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
     no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
     jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
@@ -240,6 +246,14 @@ def watch(
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
+    if ai_rename:
+        cfg.rename.enabled = True
+    if no_ai_rename:
+        cfg.rename.enabled = False
+    if provider:
+        cfg.rename.provider = provider
+    if api_key:
+        cfg.rename.api_key = api_key
     if jpg:
         cfg.jpg.enabled = True
     if no_jpg:
@@ -266,6 +280,14 @@ def watch(
             extra_args.append("--no-compress")
         if level is not None:
             extra_args.extend(["--level", str(level)])
+        if ai_rename:
+            extra_args.append("--ai-rename")
+        if no_ai_rename:
+            extra_args.append("--no-ai-rename")
+        if provider:
+            extra_args.extend(["--provider", provider])
+        if api_key:
+            extra_args.extend(["--api-key", api_key])
         if jpg:
             extra_args.append("--jpg")
         if no_jpg:
@@ -296,6 +318,7 @@ def watch(
         watermark_config=cfg.watermark,
         compression_config=cfg.compression,
         watch_config=cfg.watch,
+        rename_config=cfg.rename,
         jpg_config=cfg.jpg,
         dry_run=dry_run,
         verbose=verbose,

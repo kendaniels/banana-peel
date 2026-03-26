@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import shutil
 import signal
 import threading
 import time
@@ -13,11 +12,10 @@ from pathlib import Path
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from banana_peel.compressor import compress_png
-from banana_peel.config import CompressionConfig, JpgConfig, WatchConfig, WatermarkConfig
+from banana_peel.config import CompressionConfig, JpgConfig, RenameConfig, WatchConfig, WatermarkConfig
 from banana_peel.jpg import convert_to_jpg
 from banana_peel.notify import notify as send_notification
-from banana_peel.watermark import has_watermark, remove_watermark
+from banana_peel.processor import process_file
 
 logger = logging.getLogger("banana_peel")
 
@@ -30,6 +28,7 @@ class PngHandler(FileSystemEventHandler):
         watermark_config: WatermarkConfig,
         compression_config: CompressionConfig,
         watch_config: WatchConfig,
+        rename_config: RenameConfig | None = None,
         jpg_config: JpgConfig | None = None,
         dry_run: bool = False,
         verbose: bool = False,
@@ -37,6 +36,7 @@ class PngHandler(FileSystemEventHandler):
         super().__init__()
         self._watermark_config = watermark_config
         self._compression_config = compression_config
+        self._rename_config = rename_config or RenameConfig()
         self._jpg_config = jpg_config or JpgConfig()
         self._extensions = set(watch_config.extensions)
         self._debounce = watch_config.debounce_seconds
@@ -111,62 +111,48 @@ class PngHandler(FileSystemEventHandler):
                 if path in self._our_mtime and self._our_mtime[path] == current_mtime:
                     return
 
-            # Final name after processing
+            # Skip if already processed (peeled file exists)
             peeled_path = file_path.with_name(
                 file_path.stem + "_peeled" + file_path.suffix
             )
-
-            # Skip if already processed (peeled file exists)
             if peeled_path.exists():
                 return
 
             if self._dry_run:
-                logger.info("[dry-run] Would process: %s -> %s", path, peeled_path)
+                target = "<ai-renamed>.png" if self._rename_config.enabled else peeled_path.name
+                logger.info("[dry-run] Would process: %s -> %s", path, target)
                 return
 
-            watermark_removed = False
-            if self._watermark_config.enabled and has_watermark(file_path):
-                cleaned = remove_watermark(file_path)
-                cleaned.save(file_path, "PNG")
-                watermark_removed = True
+            result = process_file(
+                file_path=file_path,
+                watermark_config=self._watermark_config,
+                compression_config=self._compression_config,
+                rename_config=self._rename_config,
+                destination=self._destination,
+            )
+            if result is None:
+                return
 
-            saved = 0
-            if self._compression_config.enabled:
-                saved = compress_png(
-                    file_path,
-                    level=self._compression_config.level,
-                    strip=self._compression_config.strip_metadata,
-                    use_zopfli=self._compression_config.use_zopfli,
-                    zopfli_iterations=self._compression_config.zopfli_iterations,
-                )
+            final_path = result.output_path
 
-            # Rename to _peeled as final step
-            file_path.rename(peeled_path)
-
-            # Move to destination folder if configured
-            final_path = peeled_path
-            if self._destination:
-                self._destination.mkdir(parents=True, exist_ok=True)
-                dest_path = self._destination / peeled_path.name
-                shutil.move(str(peeled_path), str(dest_path))
-                final_path = dest_path
-                logger.info("Moved: %s -> %s", peeled_path.name, final_path)
+            if result.output_path.parent != file_path.parent and self._destination:
+                logger.info("Moved: %s -> %s", result.output_path.name, final_path)
 
             # JPG conversion
             if self._jpg_config.enabled:
                 jpg_path = convert_to_jpg(final_path, self._jpg_config)
                 logger.info("JPG: %s (%d bytes)", jpg_path.name, jpg_path.stat().st_size)
 
-            if watermark_removed and self._compression_config.enabled:
+            if result.watermark_removed and self._compression_config.enabled:
                 action = "Cleaned + compressed"
-            elif watermark_removed:
+            elif result.watermark_removed:
                 action = "Cleaned"
             else:
                 action = "Compressed"
-            logger.info("%s: %s -> %s (saved %d bytes)", action, file_path.name, final_path.name, saved)
+            logger.info("%s: %s -> %s (saved %d bytes)", action, file_path.name, final_path.name, result.bytes_saved)
 
             # Send notification if enabled
-            if self._notify and not self._dry_run:
+            if self._notify:
                 send_notification("Banana Peel", f"{action}: {final_path.name}")
 
             # Record the mtime of the final file so we don't re-process it
@@ -186,6 +172,7 @@ def watch(
     watermark_config: WatermarkConfig | None = None,
     compression_config: CompressionConfig | None = None,
     watch_config: WatchConfig | None = None,
+    rename_config: RenameConfig | None = None,
     jpg_config: JpgConfig | None = None,
     dry_run: bool = False,
     verbose: bool = False,
@@ -197,12 +184,14 @@ def watch(
     watermark_config = watermark_config or WatermarkConfig()
     compression_config = compression_config or CompressionConfig()
     watch_config = watch_config or WatchConfig()
+    rename_config = rename_config or RenameConfig()
     jpg_config = jpg_config or JpgConfig()
 
     handler = PngHandler(
         watermark_config=watermark_config,
         compression_config=compression_config,
         watch_config=watch_config,
+        rename_config=rename_config,
         jpg_config=jpg_config,
         dry_run=dry_run,
         verbose=verbose,

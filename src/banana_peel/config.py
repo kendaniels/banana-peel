@@ -34,6 +34,12 @@ debounce_seconds = 1.0
 extensions = [".png"]
 notify = false           # macOS notifications when an image is processed
 
+[rename]
+enabled = false              # Set true to rename files based on image content
+provider = "gemini"          # "gemini", "openai", or "anthropic"
+api_key = ""                 # API key (falls back to env var if empty)
+model = ""                   # Model override (empty = provider default)
+
 [jpg]
 enabled = false          # Set true to produce JPG output
 quality = 85             # 1-100, higher = better quality, larger file
@@ -66,6 +72,14 @@ class WatchConfig:
 
 
 @dataclass
+class RenameConfig:
+    enabled: bool = False
+    provider: str = "gemini"
+    api_key: str = ""
+    model: str = ""
+
+
+@dataclass
 class JpgConfig:
     enabled: bool = False
     quality: int = 85
@@ -77,6 +91,7 @@ class Config:
     watermark: WatermarkConfig = field(default_factory=WatermarkConfig)
     compression: CompressionConfig = field(default_factory=CompressionConfig)
     watch: WatchConfig = field(default_factory=WatchConfig)
+    rename: RenameConfig = field(default_factory=RenameConfig)
     jpg: JpgConfig = field(default_factory=JpgConfig)
 
 
@@ -110,6 +125,12 @@ def load_config(path: str | Path | None = None) -> Config:
         for key in ("directories", "destination", "recursive", "debounce_seconds", "extensions", "notify"):
             if key in watch:
                 setattr(config.watch, key, watch[key])
+
+    if "rename" in data:
+        rename = data["rename"]
+        for key in ("enabled", "provider", "api_key", "model"):
+            if key in rename:
+                setattr(config.rename, key, rename[key])
 
     if "jpg" in data:
         jpg = data["jpg"]

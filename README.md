@@ -52,7 +52,7 @@ banana-peel clean ~/Downloads --jpg --replace-png     # JPG only, delete the PNG
 banana-peel clean ~/Downloads -n             # dry run
 ```
 
-Processed files are saved as `<name>_peeled.png`.
+Processed files are saved as `<name>_peeled.png`, or given a descriptive AI-generated name with `--ai-rename`.
 
 ### watch
 
@@ -116,6 +116,12 @@ debounce_seconds = 1.0
 extensions = [".png"]
 notify = false           # macOS notifications when an image is processed
 
+[rename]
+enabled = false              # Set true to rename files based on image content
+provider = "gemini"          # "gemini", "openai", or "anthropic"
+api_key = ""                 # API key (falls back to env var if empty)
+model = ""                   # Model override (empty = provider default)
+
 [jpg]
 enabled = false          # Set true to produce JPG output
 quality = 85             # 1-100, higher = better quality, larger file
@@ -123,6 +129,34 @@ replace_png = false      # Set true to delete the PNG after JPG conversion
 ```
 
 All settings can be overridden with CLI flags.
+
+## 🤖 AI Rename
+
+Rename processed images based on their content using a vision API. Instead of `Gemini_Generated_Image_abc_peeled.png`, get descriptive names like `steak-dinner.png`.
+
+```sh
+banana-peel clean ~/Downloads --ai-rename --api-key YOUR_KEY
+banana-peel watch ~/Downloads --ai-rename --provider openai
+```
+
+Install the provider SDK you want to use:
+
+```sh
+pip install banana-peel[gemini]    # Google Gemini
+pip install banana-peel[openai]    # OpenAI
+pip install banana-peel[anthropic] # Anthropic
+pip install banana-peel[ai]        # all providers
+```
+
+Set your API key via environment variable (`GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY`) or in the config file. Enable in config for always-on renaming:
+
+```toml
+[rename]
+enabled = true
+provider = "gemini"
+```
+
+If the API is unavailable, files fall back to the standard `_peeled` naming.
 
 ## 🔬 How It Works
 
