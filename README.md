@@ -1,10 +1,10 @@
-# Banana Peel
+# 🍌 Banana Peel
 
 Remove Gemini watermarks from PNG images and losslessly compress them.
 
 Banana Peel detects the semi-transparent sparkle watermark that Gemini adds to generated images, reverses the alpha blending to restore the original pixels, then runs lossless PNG compression. It can process files on demand or watch a directory and clean images automatically as they appear.
 
-## Install
+## 📦 Install
 
 ```sh
 pip install banana-peel
@@ -18,7 +18,7 @@ pipx install banana-peel
 
 Python 3.9+ required.
 
-## Quick Start
+## 🚀 Quick Start
 
 Clean images in your Downloads folder:
 
@@ -113,7 +113,7 @@ notify = false           # macOS notifications when an image is processed
 
 All settings can be overridden with CLI flags.
 
-## How It Works
+## 🔬 How It Works
 
 1. **Detection** -- Normalized cross-correlation matches the image against known watermark alpha masks (48x48 and 96x96 variants)
 2. **Removal** -- Reverse alpha blending restores the original pixel values: `original = (watermarked - alpha * 255) / (1 - alpha)`

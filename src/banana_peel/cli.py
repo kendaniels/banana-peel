@@ -152,7 +152,7 @@ def clean(
 
     if not dry_run:
         console.print(
-            f"\n[bold green]Done![/bold green] "
+            f"\n[bold green]🍌 Done![/bold green] "
             f"Processed {len(png_files)} file(s), "
             f"removed {watermarks_removed} watermark(s), "
             f"saved {total_saved:,} bytes total."
@@ -208,7 +208,7 @@ def watch(
             extra_args.extend(["--level", str(level)])
 
         pid = start_background(extra_args)
-        console.print(f"[green]Started background watcher[/green] (PID {pid})")
+        console.print(f"[green]🍌 Started background watcher[/green] (PID {pid})")
         console.print(f"[dim]Logs: {LOG_PATH}[/dim]")
         console.print(f"[dim]Stop with: banana-peel stop[/dim]")
         return
@@ -220,7 +220,7 @@ def watch(
         pid_file.acquire()
     else:
         _setup_logging(verbose)
-        console.print(f"[bold]Banana Peel[/bold] watching {len(watch_dirs_list)} directory(ies)...")
+        console.print(f"[bold]🍌 Banana Peel[/bold] watching {len(watch_dirs_list)} directory(ies)...")
         console.print("[dim]Press Ctrl+C to stop.[/dim]\n")
 
     watch_dirs(
