@@ -72,6 +72,10 @@ def clean(
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
     destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
+    ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
+    no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
+    api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be done without doing it."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
     config: Optional[Path] = typer.Option(None, "--config", "-c", help="Config file path."),
@@ -91,6 +95,14 @@ def clean(
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
+    if ai_rename:
+        cfg.rename.enabled = True
+    if no_ai_rename:
+        cfg.rename.enabled = False
+    if provider:
+        cfg.rename.provider = provider
+    if api_key:
+        cfg.rename.api_key = api_key
 
     # Resolve destination directory
     dest_dir: Path | None = None
@@ -120,6 +132,9 @@ def clean(
     if not png_files:
         console.print("[yellow]No PNG files found.[/yellow]")
         raise typer.Exit(1)
+
+    if cfg.rename.enabled and not dry_run:
+        console.print(f"[dim]AI rename enabled: will make {len(png_files)} API call(s)[/dim]")
 
     total_saved = 0
     watermarks_removed = 0
@@ -173,6 +188,10 @@ def watch(
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
+    ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
+    no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
+    provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
+    api_key: Optional[str] = typer.Option(None, "--api-key", help="API key for the AI provider."),
     background: bool = typer.Option(False, "--background", "-b", help="Run in background and detach."),
     daemon_mode: bool = typer.Option(False, "--daemon-mode", hidden=True, help="Internal: run in foreground with file logging."),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be done."),
@@ -200,6 +219,14 @@ def watch(
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
+    if ai_rename:
+        cfg.rename.enabled = True
+    if no_ai_rename:
+        cfg.rename.enabled = False
+    if provider:
+        cfg.rename.provider = provider
+    if api_key:
+        cfg.rename.api_key = api_key
 
     # Background mode: fork and exit parent
     if background:
@@ -218,6 +245,14 @@ def watch(
             extra_args.append("--no-compress")
         if level is not None:
             extra_args.extend(["--level", str(level)])
+        if ai_rename:
+            extra_args.append("--ai-rename")
+        if no_ai_rename:
+            extra_args.append("--no-ai-rename")
+        if provider:
+            extra_args.extend(["--provider", provider])
+        if api_key:
+            extra_args.extend(["--api-key", api_key])
 
         pid = start_background(extra_args)
         console.print(f"[green]🍌 Started background watcher[/green] (PID {pid})")
