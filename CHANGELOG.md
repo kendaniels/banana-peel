@@ -19,6 +19,7 @@ All notable changes to Banana Peel will be documented in this file.
 - Renamed `--destination` / `-d` to `--move` / `-m`
 - Add `--resize N` option to resize images to max dimension (aspect ratio preserved)
 - Add `[resize]` config section with `enabled` and `max_dimension` options
+- Renamed `--no-watermark` to `--skip-watermark`
 
 ## 0.2.0 - 2026-03-26
 
