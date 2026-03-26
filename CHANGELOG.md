@@ -17,6 +17,8 @@ All notable changes to Banana Peel will be documented in this file.
 - Add `[jpg]` config section with `enabled`, `quality`, and `replace_png` options
 - RGBA images are composited onto white background before JPG conversion
 - Renamed `--destination` / `-d` to `--move` / `-m`
+- Add `--resize N` option to resize images to max dimension (aspect ratio preserved)
+- Add `[resize]` config section with `enabled` and `max_dimension` options
 
 ## 0.2.0 - 2026-03-26
 

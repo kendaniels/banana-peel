@@ -46,6 +46,7 @@ banana-peel clean ~/Downloads --no-watermark             # compress only, skip w
 banana-peel clean ~/Downloads -m ~/Pictures/gemini       # move processed files to a folder
 banana-peel clean ~/Downloads --no-compress              # watermark removal only, skip compression
 banana-peel clean ~/Downloads --zopfli                   # max compression (slower)
+banana-peel clean ~/Downloads --resize 1024              # resize to max 1024px
 banana-peel clean ~/Downloads --jpg                      # also produce a JPG output
 banana-peel clean ~/Downloads --jpg --jpg-quality 60     # JPG at 60% quality
 banana-peel clean ~/Downloads --jpg --replace-png        # JPG only, delete the PNG
@@ -115,6 +116,10 @@ recursive = false
 debounce_seconds = 1.0
 extensions = [".png"]
 notify = false           # macOS notifications when an image is processed
+
+[resize]
+enabled = false          # Set true to resize images
+max_dimension = 1024     # Longest side in pixels (aspect ratio preserved)
 
 [rename]
 enabled = false              # Set true to rename files based on image content

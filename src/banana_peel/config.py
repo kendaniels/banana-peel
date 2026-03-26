@@ -40,6 +40,10 @@ provider = "gemini"          # "gemini", "openai", or "anthropic"
 api_key = ""                 # API key (falls back to env var if empty)
 model = ""                   # Model override (empty = provider default)
 
+[resize]
+enabled = false          # Set true to resize images
+max_dimension = 1024     # Longest side in pixels (aspect ratio preserved)
+
 [jpg]
 enabled = false          # Set true to produce JPG output
 quality = 85             # 1-100, higher = better quality, larger file
@@ -80,6 +84,12 @@ class RenameConfig:
 
 
 @dataclass
+class ResizeConfig:
+    enabled: bool = False
+    max_dimension: int = 1024
+
+
+@dataclass
 class JpgConfig:
     enabled: bool = False
     quality: int = 85
@@ -92,6 +102,7 @@ class Config:
     compression: CompressionConfig = field(default_factory=CompressionConfig)
     watch: WatchConfig = field(default_factory=WatchConfig)
     rename: RenameConfig = field(default_factory=RenameConfig)
+    resize: ResizeConfig = field(default_factory=ResizeConfig)
     jpg: JpgConfig = field(default_factory=JpgConfig)
 
 
@@ -131,6 +142,12 @@ def load_config(path: str | Path | None = None) -> Config:
         for key in ("enabled", "provider", "api_key", "model"):
             if key in rename:
                 setattr(config.rename, key, rename[key])
+
+    if "resize" in data:
+        resize = data["resize"]
+        for key in ("enabled", "max_dimension"):
+            if key in resize:
+                setattr(config.resize, key, resize[key])
 
     if "jpg" in data:
         jpg = data["jpg"]
