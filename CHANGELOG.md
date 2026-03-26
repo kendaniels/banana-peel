@@ -12,6 +12,10 @@ All notable changes to Banana Peel will be documented in this file.
 - Graceful fallback to `_peeled` naming when API is unavailable
 - Retry with exponential backoff on rate limiting
 - Refactored processing pipeline into shared `processor.py` module
+- Add JPG output option with configurable quality (`--jpg`, `--jpg-quality 1-100`)
+- Add `--replace-png` flag to delete the PNG after JPG conversion
+- Add `[jpg]` config section with `enabled`, `quality`, and `replace_png` options
+- RGBA images are composited onto white background before JPG conversion
 
 ## 0.2.0 - 2026-03-26
 

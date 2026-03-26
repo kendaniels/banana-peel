@@ -12,7 +12,8 @@ from pathlib import Path
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from banana_peel.config import CompressionConfig, RenameConfig, WatchConfig, WatermarkConfig
+from banana_peel.config import CompressionConfig, JpgConfig, RenameConfig, WatchConfig, WatermarkConfig
+from banana_peel.jpg import convert_to_jpg
 from banana_peel.notify import notify as send_notification
 from banana_peel.processor import process_file
 
@@ -28,6 +29,7 @@ class PngHandler(FileSystemEventHandler):
         compression_config: CompressionConfig,
         watch_config: WatchConfig,
         rename_config: RenameConfig | None = None,
+        jpg_config: JpgConfig | None = None,
         dry_run: bool = False,
         verbose: bool = False,
     ):
@@ -35,6 +37,7 @@ class PngHandler(FileSystemEventHandler):
         self._watermark_config = watermark_config
         self._compression_config = compression_config
         self._rename_config = rename_config or RenameConfig()
+        self._jpg_config = jpg_config or JpgConfig()
         self._extensions = set(watch_config.extensions)
         self._debounce = watch_config.debounce_seconds
         self._destination = (
@@ -135,6 +138,11 @@ class PngHandler(FileSystemEventHandler):
             if result.output_path.parent != file_path.parent and self._destination:
                 logger.info("Moved: %s -> %s", result.output_path.name, final_path)
 
+            # JPG conversion
+            if self._jpg_config.enabled:
+                jpg_path = convert_to_jpg(final_path, self._jpg_config)
+                logger.info("JPG: %s (%d bytes)", jpg_path.name, jpg_path.stat().st_size)
+
             if result.watermark_removed and self._compression_config.enabled:
                 action = "Cleaned + compressed"
             elif result.watermark_removed:
@@ -165,6 +173,7 @@ def watch(
     compression_config: CompressionConfig | None = None,
     watch_config: WatchConfig | None = None,
     rename_config: RenameConfig | None = None,
+    jpg_config: JpgConfig | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
@@ -176,12 +185,14 @@ def watch(
     compression_config = compression_config or CompressionConfig()
     watch_config = watch_config or WatchConfig()
     rename_config = rename_config or RenameConfig()
+    jpg_config = jpg_config or JpgConfig()
 
     handler = PngHandler(
         watermark_config=watermark_config,
         compression_config=compression_config,
         watch_config=watch_config,
         rename_config=rename_config,
+        jpg_config=jpg_config,
         dry_run=dry_run,
         verbose=verbose,
     )

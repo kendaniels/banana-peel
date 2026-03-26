@@ -46,6 +46,9 @@ banana-peel clean ~/Downloads --no-watermark  # compress only, skip watermark re
 banana-peel clean ~/Downloads -d ~/Pictures/gemini  # move processed files to a folder
 banana-peel clean ~/Downloads --no-compress  # watermark removal only, skip compression
 banana-peel clean ~/Downloads --zopfli       # max compression (slower)
+banana-peel clean ~/Downloads --jpg          # also produce a JPG output
+banana-peel clean ~/Downloads --jpg --jpg-quality 60  # JPG at 60% quality
+banana-peel clean ~/Downloads --jpg --replace-png     # JPG only, delete the PNG
 banana-peel clean ~/Downloads -n             # dry run
 ```
 
@@ -118,6 +121,11 @@ enabled = false              # Set true to rename files based on image content
 provider = "gemini"          # "gemini", "openai", or "anthropic"
 api_key = ""                 # API key (falls back to env var if empty)
 model = ""                   # Model override (empty = provider default)
+
+[jpg]
+enabled = false          # Set true to produce JPG output
+quality = 85             # 1-100, higher = better quality, larger file
+replace_png = false      # Set true to delete the PNG after JPG conversion
 ```
 
 All settings can be overridden with CLI flags.
