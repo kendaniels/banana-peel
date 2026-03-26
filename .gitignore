@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Test fixtures (large PNGs)
+tests/fixtures/*.png
+
+# Sample images
+*.png
+!src/banana_peel/assets/*.png
+
+# Logs and PID files
+*.log
+*.pid

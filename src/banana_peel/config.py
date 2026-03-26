@@ -1,0 +1,107 @@
+"""Configuration loading from TOML files with defaults."""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
+
+DEFAULT_CONFIG_PATH = Path.home() / ".config" / "banana-peel" / "config.toml"
+
+DEFAULT_TOML = """\
+[watermark]
+enabled = true           # Set false to skip watermark removal (compression only)
+
+[compression]
+enabled = true           # Set false to skip compression (watermark removal only)
+level = 4                # 0-6, higher = slower + smaller
+strip_metadata = "safe"  # "none", "safe", "all"
+use_zopfli = false       # Use Zopfli for max compression (slower)
+
+[watch]
+directories = ["~/Downloads"]  # Folders to watch (paths must be quoted)
+recursive = false
+debounce_seconds = 1.0
+extensions = [".png"]
+notify = false           # macOS notifications when an image is processed
+"""
+
+
+@dataclass
+class WatermarkConfig:
+    enabled: bool = True
+
+
+@dataclass
+class CompressionConfig:
+    enabled: bool = True
+    level: int = 4
+    strip_metadata: str = "safe"
+    use_zopfli: bool = False
+    zopfli_iterations: int = 15
+
+
+@dataclass
+class WatchConfig:
+    directories: list[str] = field(default_factory=list)
+    recursive: bool = False
+    debounce_seconds: float = 1.0
+    extensions: list[str] = field(default_factory=lambda: [".png"])
+    notify: bool = False
+
+
+@dataclass
+class Config:
+    watermark: WatermarkConfig = field(default_factory=WatermarkConfig)
+    compression: CompressionConfig = field(default_factory=CompressionConfig)
+    watch: WatchConfig = field(default_factory=WatchConfig)
+
+
+def load_config(path: str | Path | None = None) -> Config:
+    """Load config from a TOML file, falling back to defaults."""
+    config = Config()
+
+    config_path = Path(path) if path else DEFAULT_CONFIG_PATH
+    if not config_path.exists():
+        return config
+
+    if tomllib is None:
+        return config
+
+    with open(config_path, "rb") as f:
+        data = tomllib.load(f)
+
+    if "watermark" in data:
+        wm = data["watermark"]
+        if "enabled" in wm:
+            config.watermark.enabled = wm["enabled"]
+
+    if "compression" in data:
+        comp = data["compression"]
+        for key in ("enabled", "level", "strip_metadata", "use_zopfli", "zopfli_iterations"):
+            if key in comp:
+                setattr(config.compression, key, comp[key])
+
+    if "watch" in data:
+        watch = data["watch"]
+        for key in ("directories", "recursive", "debounce_seconds", "extensions", "notify"):
+            if key in watch:
+                setattr(config.watch, key, watch[key])
+
+    return config
+
+
+def write_default_config(path: str | Path | None = None) -> Path:
+    """Write default config file. Returns the path written to."""
+    config_path = Path(path) if path else DEFAULT_CONFIG_PATH
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(DEFAULT_TOML)
+    return config_path
