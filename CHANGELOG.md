@@ -2,6 +2,17 @@
 
 All notable changes to Banana Peel will be documented in this file.
 
+## 0.3.0 - 2026-03-26
+
+- AI-powered image renaming: `--ai-rename` flag renames files based on image content (e.g., `steak-dinner.png`)
+- Provider-agnostic: supports Gemini, OpenAI, and Anthropic vision APIs
+- `[rename]` config section with `enabled`, `provider`, `api_key`, and `model` options
+- `--provider` and `--api-key` CLI flags for both `clean` and `watch` commands
+- Optional SDK dependencies: `pip install banana-peel[gemini]`, `[openai]`, `[anthropic]`, or `[ai]`
+- Graceful fallback to `_peeled` naming when API is unavailable
+- Retry with exponential backoff on rate limiting
+- Refactored processing pipeline into shared `processor.py` module
+
 ## 0.2.0 - 2026-03-26
 
 - Add `--destination` / `-d` option to `clean` and `watch` commands to move processed files to a separate folder
