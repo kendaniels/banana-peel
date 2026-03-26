@@ -1,8 +1,8 @@
 # 🍌 Banana Peel
 
-Remove Gemini watermarks from PNG images and losslessly compress them.
+Remove Gemini watermarks from PNG images, resize, compress, rename with AI, and convert to JPG.
 
-Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark and compressing them the moment they land. Set a move folder and processed images get moved there automatically, keeping Downloads clean. Install it as an OS service and never think about it again -- every image arrives clean. It also works as a one-shot CLI for processing files you already have.
+Point Banana Peel at your Downloads folder and it watches for new Gemini images, automatically peeling the watermark, resizing, compressing, and optionally renaming them based on image content using AI. Convert to JPG, move to a destination folder, or both -- every image arrives clean. Install it as an OS service and never think about it again. It also works as a one-shot CLI for processing files you already have.
 
 ## 📦 Install
 
