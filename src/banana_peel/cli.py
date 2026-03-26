@@ -15,6 +15,7 @@ from banana_peel import __version__
 from banana_peel.compressor import compress_png
 from banana_peel.config import Config, load_config, write_default_config
 from banana_peel.daemon import LOG_PATH, PID_PATH, PidFile, start_background
+from banana_peel.jpg import convert_to_jpg
 from banana_peel.watermark import has_watermark, remove_watermark
 from banana_peel.watcher import watch as watch_dirs
 
@@ -74,6 +75,10 @@ def clean(
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
     destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
+    jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
+    no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
+    jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
+    replace_png: bool = typer.Option(False, "--replace-png", help="Delete PNG after JPG conversion."),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be done without doing it."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output."),
     config: Optional[Path] = typer.Option(None, "--config", "-c", help="Config file path."),
@@ -88,6 +93,15 @@ def clean(
     use_zopfli = zopfli or cfg.compression.use_zopfli
     do_watermark = not no_watermark and cfg.watermark.enabled
     do_compress = not no_compress and cfg.compression.enabled
+
+    if jpg:
+        cfg.jpg.enabled = True
+    if no_jpg:
+        cfg.jpg.enabled = False
+    if jpg_quality is not None:
+        cfg.jpg.quality = jpg_quality
+    if replace_png:
+        cfg.jpg.replace_png = True
 
     # Resolve destination directory
     dest_dir: Path | None = None
@@ -138,7 +152,11 @@ def clean(
             action = "compress + rename" if do_compress else "rename"
             if watermark_removed:
                 action = "remove watermark + " + action
-            console.print(f"[dim]Would {action}:[/dim] {png.name} -> {peeled_path.name}")
+            target = peeled_path.name
+            if cfg.jpg.enabled:
+                jpg_name = peeled_path.with_suffix(".jpg").name
+                target += f" + {jpg_name} (quality: {cfg.jpg.quality})"
+            console.print(f"[dim]Would {action}:[/dim] {png.name} -> {target}")
         else:
             saved = 0
             if do_compress:
@@ -157,6 +175,13 @@ def clean(
                 shutil.move(str(peeled_path), str(final_path))
                 peeled_path = final_path
                 console.print(f"[blue]Moved:[/blue] {final_path}")
+
+            # JPG conversion
+            if cfg.jpg.enabled:
+                jpg_path = convert_to_jpg(peeled_path, cfg.jpg)
+                jpg_size = jpg_path.stat().st_size
+                if verbose:
+                    console.print(f"[green]JPG:[/green] {jpg_path.name} [dim]({jpg_size:,} bytes)[/dim]")
 
             if watermark_removed and do_compress:
                 status_msg = "Cleaned + compressed"
@@ -184,6 +209,10 @@ def watch(
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
+    jpg: bool = typer.Option(False, "--jpg", help="Also produce a JPG output."),
+    no_jpg: bool = typer.Option(False, "--no-jpg", help="Disable JPG output (overrides config)."),
+    jpg_quality: Optional[int] = typer.Option(None, "--jpg-quality", min=1, max=100, help="JPG quality 1-100 (default: 85)."),
+    replace_png: bool = typer.Option(False, "--replace-png", help="Delete PNG after JPG conversion."),
     background: bool = typer.Option(False, "--background", "-b", help="Run in background and detach."),
     daemon_mode: bool = typer.Option(False, "--daemon-mode", hidden=True, help="Internal: run in foreground with file logging."),
     dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show what would be done."),
@@ -211,6 +240,14 @@ def watch(
         cfg.watermark.enabled = False
     if no_compress:
         cfg.compression.enabled = False
+    if jpg:
+        cfg.jpg.enabled = True
+    if no_jpg:
+        cfg.jpg.enabled = False
+    if jpg_quality is not None:
+        cfg.jpg.quality = jpg_quality
+    if replace_png:
+        cfg.jpg.replace_png = True
 
     # Background mode: fork and exit parent
     if background:
@@ -229,6 +266,14 @@ def watch(
             extra_args.append("--no-compress")
         if level is not None:
             extra_args.extend(["--level", str(level)])
+        if jpg:
+            extra_args.append("--jpg")
+        if no_jpg:
+            extra_args.append("--no-jpg")
+        if jpg_quality is not None:
+            extra_args.extend(["--jpg-quality", str(jpg_quality)])
+        if replace_png:
+            extra_args.append("--replace-png")
 
         pid = start_background(extra_args)
         console.print(f"[green]🍌 Started background watcher[/green] (PID {pid})")
@@ -251,6 +296,7 @@ def watch(
         watermark_config=cfg.watermark,
         compression_config=cfg.compression,
         watch_config=cfg.watch,
+        jpg_config=cfg.jpg,
         dry_run=dry_run,
         verbose=verbose,
     )

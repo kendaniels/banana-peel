@@ -33,6 +33,11 @@ recursive = false
 debounce_seconds = 1.0
 extensions = [".png"]
 notify = false           # macOS notifications when an image is processed
+
+[jpg]
+enabled = false          # Set true to produce JPG output
+quality = 85             # 1-100, higher = better quality, larger file
+replace_png = false      # Set true to delete the PNG after JPG conversion
 """
 
 
@@ -61,10 +66,18 @@ class WatchConfig:
 
 
 @dataclass
+class JpgConfig:
+    enabled: bool = False
+    quality: int = 85
+    replace_png: bool = False
+
+
+@dataclass
 class Config:
     watermark: WatermarkConfig = field(default_factory=WatermarkConfig)
     compression: CompressionConfig = field(default_factory=CompressionConfig)
     watch: WatchConfig = field(default_factory=WatchConfig)
+    jpg: JpgConfig = field(default_factory=JpgConfig)
 
 
 def load_config(path: str | Path | None = None) -> Config:
@@ -97,6 +110,12 @@ def load_config(path: str | Path | None = None) -> Config:
         for key in ("directories", "destination", "recursive", "debounce_seconds", "extensions", "notify"):
             if key in watch:
                 setattr(config.watch, key, watch[key])
+
+    if "jpg" in data:
+        jpg = data["jpg"]
+        for key in ("enabled", "quality", "replace_png"):
+            if key in jpg:
+                setattr(config.jpg, key, jpg[key])
 
     return config
 

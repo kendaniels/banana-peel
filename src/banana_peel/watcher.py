@@ -14,7 +14,8 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
 from banana_peel.compressor import compress_png
-from banana_peel.config import CompressionConfig, WatchConfig, WatermarkConfig
+from banana_peel.config import CompressionConfig, JpgConfig, WatchConfig, WatermarkConfig
+from banana_peel.jpg import convert_to_jpg
 from banana_peel.notify import notify as send_notification
 from banana_peel.watermark import has_watermark, remove_watermark
 
@@ -29,12 +30,14 @@ class PngHandler(FileSystemEventHandler):
         watermark_config: WatermarkConfig,
         compression_config: CompressionConfig,
         watch_config: WatchConfig,
+        jpg_config: JpgConfig | None = None,
         dry_run: bool = False,
         verbose: bool = False,
     ):
         super().__init__()
         self._watermark_config = watermark_config
         self._compression_config = compression_config
+        self._jpg_config = jpg_config or JpgConfig()
         self._extensions = set(watch_config.extensions)
         self._debounce = watch_config.debounce_seconds
         self._destination = (
@@ -149,6 +152,11 @@ class PngHandler(FileSystemEventHandler):
                 final_path = dest_path
                 logger.info("Moved: %s -> %s", peeled_path.name, final_path)
 
+            # JPG conversion
+            if self._jpg_config.enabled:
+                jpg_path = convert_to_jpg(final_path, self._jpg_config)
+                logger.info("JPG: %s (%d bytes)", jpg_path.name, jpg_path.stat().st_size)
+
             if watermark_removed and self._compression_config.enabled:
                 action = "Cleaned + compressed"
             elif watermark_removed:
@@ -178,6 +186,7 @@ def watch(
     watermark_config: WatermarkConfig | None = None,
     compression_config: CompressionConfig | None = None,
     watch_config: WatchConfig | None = None,
+    jpg_config: JpgConfig | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> None:
@@ -188,11 +197,13 @@ def watch(
     watermark_config = watermark_config or WatermarkConfig()
     compression_config = compression_config or CompressionConfig()
     watch_config = watch_config or WatchConfig()
+    jpg_config = jpg_config or JpgConfig()
 
     handler = PngHandler(
         watermark_config=watermark_config,
         compression_config=compression_config,
         watch_config=watch_config,
+        jpg_config=jpg_config,
         dry_run=dry_run,
         verbose=verbose,
     )
