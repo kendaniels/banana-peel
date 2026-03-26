@@ -72,7 +72,7 @@ def clean(
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal (compress only)."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression (watermark removal only)."),
     zopfli: bool = typer.Option(False, "--zopfli", help="Use Zopfli for max compression (slower)."),
-    destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
+    move: Optional[Path] = typer.Option(None, "--move", "-m", help="Move processed files to this directory."),
     ai_rename: bool = typer.Option(False, "--ai-rename", help="Rename files based on image content using AI."),
     no_ai_rename: bool = typer.Option(False, "--no-ai-rename", help="Disable AI renaming (overrides config)."),
     provider: Optional[str] = typer.Option(None, "--provider", help="AI provider: gemini, openai, anthropic."),
@@ -119,8 +119,8 @@ def clean(
 
     # Resolve destination directory
     dest_dir: Path | None = None
-    if destination:
-        dest_dir = destination.expanduser().resolve()
+    if move:
+        dest_dir = move.expanduser().resolve()
     elif cfg.watch.destination:
         dest_dir = Path(cfg.watch.destination).expanduser().resolve()
     if dest_dir:
@@ -207,7 +207,7 @@ def clean(
 @app.command()
 def watch(
     directories: Optional[List[Path]] = typer.Argument(None, help="Directories to watch."),
-    destination: Optional[Path] = typer.Option(None, "--destination", "-d", help="Move processed files to this directory."),
+    move: Optional[Path] = typer.Option(None, "--move", "-m", help="Move processed files to this directory."),
     level: Optional[int] = typer.Option(None, "--level", "-l", min=0, max=6, help="Compression level (0-6)."),
     no_watermark: bool = typer.Option(False, "--no-watermark", help="Skip watermark removal."),
     no_compress: bool = typer.Option(False, "--no-compress", help="Skip compression."),
@@ -238,8 +238,8 @@ def watch(
         console.print("[red]No directories specified.[/red] Pass directories as arguments or set them in config.")
         raise typer.Exit(1)
 
-    if destination:
-        cfg.watch.destination = str(destination.expanduser().resolve())
+    if move:
+        cfg.watch.destination = str(move.expanduser().resolve())
     if level is not None:
         cfg.compression.level = level
     if no_watermark:
@@ -268,8 +268,8 @@ def watch(
         extra_args = []
         for d in watch_dirs_list:
             extra_args.append(d)
-        if destination:
-            extra_args.extend(["--destination", str(destination.expanduser().resolve())])
+        if move:
+            extra_args.extend(["--move", str(move.expanduser().resolve())])
         if config:
             extra_args.extend(["--config", str(config)])
         if verbose:

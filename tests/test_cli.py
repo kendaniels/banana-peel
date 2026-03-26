@@ -49,9 +49,9 @@ def test_status_not_running():
     assert "Not running" in result.output
 
 
-def test_clean_with_destination(tmp_png, tmp_path):
+def test_clean_with_move(tmp_png, tmp_path):
     dest = tmp_path / "output"
-    result = runner.invoke(app, ["clean", str(tmp_png), "--destination", str(dest), "--verbose"])
+    result = runner.invoke(app, ["clean", str(tmp_png), "--move", str(dest), "--verbose"])
     assert result.exit_code == 0
     assert "Done!" in result.output
     # File should be in destination, not original location

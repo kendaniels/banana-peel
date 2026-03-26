@@ -43,7 +43,7 @@ banana-peel clean photo.png                  # single file
 banana-peel clean ~/Downloads                # all Gemini PNGs in a directory
 banana-peel clean ~/Downloads -r             # recursive
 banana-peel clean ~/Downloads --no-watermark  # compress only, skip watermark removal
-banana-peel clean ~/Downloads -d ~/Pictures/gemini  # move processed files to a folder
+banana-peel clean ~/Downloads -m ~/Pictures/gemini  # move processed files to a folder
 banana-peel clean ~/Downloads --no-compress  # watermark removal only, skip compression
 banana-peel clean ~/Downloads --zopfli       # max compression (slower)
 banana-peel clean ~/Downloads --jpg          # also produce a JPG output
@@ -61,7 +61,7 @@ Monitor directories and process new Gemini PNGs as they arrive.
 ```sh
 banana-peel watch ~/Downloads              # foreground
 banana-peel watch ~/Downloads -b           # background (detached)
-banana-peel watch ~/Downloads -d ~/Pictures/gemini  # move processed files to a folder
+banana-peel watch ~/Downloads -m ~/Pictures/gemini  # move processed files to a folder
 banana-peel watch                           # uses directories from config
 ```
 
